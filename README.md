@@ -36,5 +36,7 @@ Si deseas replicar este circuito, aquí tienes la tabla de enrutamiento:
 ## 👨‍🏫 Autoría y Contacto
 
 **Mtro. Saul Isai Soto Ortiz** *Profesor Titular A | Ingeniería en Tecnologías de la Información y Comunicaciones* 
+
 **Instituto Tecnológico Superior del Occidente del Estado de Hidalgo (ITSOEH)**
+
 *La programación y la electrónica nos permiten automatizar el mundo.*
