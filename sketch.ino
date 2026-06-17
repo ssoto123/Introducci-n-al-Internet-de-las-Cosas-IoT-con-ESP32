@@ -57,7 +57,7 @@ void loop() {
       HTTPClient http;
       
       // Creamos la URL con los datos del sensor. Usamos un identificador único para el evento.
-      String serverPath = "http://dweet.io/dweet/for/demo-iot-itsoeh?temperatura=" + String(data.temperature, 1) + "&humedad=" + String(data.humidity, 1);
+      String serverPath = "http://dweet.cc/dweet/for/demo-iot-itsoeh?temperatura=" + String(data.temperature, 1) + "&humedad=" + String(data.humidity, 1);
       
       http.begin(serverPath.c_str());
       int httpResponseCode = http.GET(); // Hacemos la petición
