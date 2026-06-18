@@ -16,9 +16,9 @@ Si deseas replicar este circuito, aquí tienes la tabla de enrutamiento:
 | Componente | Pin del Componente | Pin del ESP32 | Función |
 | :--- | :--- | :--- | :--- |
 | **DHT22** | VCC | 3V3 | Alimentación |
-| **DHT22** | SDA (Data) | GPIO 15 | Línea de datos |
+| **DHT22** | SDA (Data) | GPIO 4 | Línea de datos |
 | **DHT22** | GND | GND | Tierra |
-| **LED Rojo** | Ánodo (+) | GPIO 2 | Señal de control |
+| **LED Rojo** | Ánodo (+) | GPIO 16 | Señal de control |
 | **Resistencia** | Terminal 1 | Cátodo LED (-) | Límite de corriente (220Ω) |
 | **Resistencia** | Terminal 2 | GND | Cierre a Tierra |
 
