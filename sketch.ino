@@ -1,50 +1,77 @@
 #include <WiFi.h>
-#include <HTTPClient.h> // Librería necesaria para enviar datos a la nube
-#include "DHTesp.h"
+#include <HTTPClient.h>
+#include <DHT.h>
 
-// Red virtual de Wokwi
-const char* WIFI_SSID = "Wokwi-GUEST"; 
+// ------------ WIFI ------------
+const char* WIFI_SSID = "";
 const char* WIFI_PASSWORD = "";
 
-// Definición de pines
-const int DHT_PIN = 15;
-const int LED_PIN = 2;
+// ------------ PINES ------------
+#define DHT_PIN 4
+#define DHT_TYPE DHT22
 
-DHTesp dhtSensor;
+const int LED_PIN = 16;
+
+// ------------ SENSOR ------------
+DHT dhtSensor(DHT_PIN, DHT_TYPE);
+
+// ------------ TEMPORIZADOR ------------
+unsigned long ultimoEnvio = 0;
+const unsigned long intervaloLectura = 2000; // 2 segundos
 
 void setup() {
+
   Serial.begin(115200);
+
   pinMode(LED_PIN, OUTPUT);
-  
-  // Inicialización del sensor
-  dhtSensor.setup(DHT_PIN, DHTesp::DHT22);
-  
+
+  // Inicializar DHT22
+  dhtSensor.begin();
+
+  delay(2000);
+
   // Conexión WiFi
   Serial.print("Conectando a la red WiFi local");
+
+  WiFi.mode(WIFI_STA);
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print(".");
   }
+
+  WiFi.setSleep(false);
+
   Serial.println("\n¡Conexión Exitosa!");
   Serial.print("IP Asignada: ");
   Serial.println(WiFi.localIP());
 }
 
 void loop() {
-  TempAndHumidity data = dhtSensor.getTempAndHumidity();
-  
-  if (dhtSensor.getStatus() != 0) {
-    Serial.println("Error al leer el sensor DHT22");
-  } else {
+
+  // Ejecutar cada 2 segundos sin bloquear el ESP32
+  if (millis() - ultimoEnvio >= intervaloLectura) {
+
+    ultimoEnvio = millis();
+
+    float temperatura = dhtSensor.readTemperature();
+    float humedad = dhtSensor.readHumidity();
+
+    // Verificar lectura válida
+    if (isnan(temperatura) || isnan(humedad)) {
+      Serial.println("Error al leer el sensor DHT22");
+      return;
+    }
+
     Serial.print("Temperatura: ");
-    Serial.print(data.temperature, 1);
+    Serial.print(temperatura, 1);
     Serial.print("°C | Humedad: ");
-    Serial.print(data.humidity, 1);
+    Serial.print(humedad, 1);
     Serial.println("%");
-    
-    // Lógica del Actuador
-    if (data.temperature > 30.0) {
+
+    // Lógica del actuador
+    if (temperatura >= 25.0) {
       digitalWrite(LED_PIN, HIGH);
       Serial.println("[ALERTA] Temperatura Crítica. Actuador ENCENDIDO.");
     } else {
@@ -52,28 +79,56 @@ void loop() {
       Serial.println("[INFO] Temperatura Normal. Actuador APAGADO.");
     }
 
-    // --- ENVÍO REAL A LA NUBE (HTTP GET) ---
-    if(WiFi.status() == WL_CONNECTED){
+    // -------- ENVÍO A DWEET --------
+    if (WiFi.status() == WL_CONNECTED) {
+
       HTTPClient http;
-      
-      // Creamos la URL con los datos del sensor. Usamos un identificador único para el evento.
-      String serverPath = "http://dweet.cc/dweet/for/demo-iot-itsoeh?temperatura=" + String(data.temperature, 1) + "&humedad=" + String(data.humidity, 1);
-      
-      http.begin(serverPath.c_str());
-      int httpResponseCode = http.GET(); // Hacemos la petición
-      
-      if (httpResponseCode > 0) {
-        Serial.print("Datos enviados a la nube exitosamente. Código HTTP: ");
+
+      String serverPath =
+        "http://dweet.cc/dweet/for/demo-iot-itsoeh?temperatura=" +
+        String(temperatura, 1) +
+        "&humedad=" +
+        String(humedad, 1);
+
+      Serial.println();
+      Serial.println("URL:");
+      Serial.println(serverPath);
+
+      http.setTimeout(5000);
+      http.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
+
+      if (http.begin(serverPath)) {
+
+        int httpResponseCode = http.GET();
+
+        Serial.print("HTTP: ");
         Serial.println(httpResponseCode);
+
+        if (httpResponseCode > 0) {
+
+          String payload = http.getString();
+
+          Serial.println("Respuesta del servidor:");
+          Serial.println(payload);
+
+        } else {
+
+          Serial.print("Error HTTP: ");
+          Serial.println(http.errorToString(httpResponseCode));
+        }
+
+        http.end();
+
       } else {
-        Serial.print("Error al enviar a la nube. Código de error: ");
-        Serial.println(httpResponseCode);
+
+        Serial.println("No se pudo iniciar la conexión HTTP");
       }
-      http.end(); // Liberamos recursos
+
     } else {
+
       Serial.println("Error: WiFi desconectado");
     }
   }
-  
-  delay(2000); // Esperamos 2 segundos antes de la siguiente lectura
+
+  // Aquí pueden ejecutarse otras tareas sin bloquearse
 }
